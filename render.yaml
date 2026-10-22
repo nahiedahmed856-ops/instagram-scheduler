@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: instagram-auto-scheduler
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --workers 1 --threads 4 --timeout 180
+    plan: free
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: POST_INTERVAL_HOURS
+        value: "3"
