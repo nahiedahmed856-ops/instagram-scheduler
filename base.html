@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="bn" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Instagram Auto Scheduler{% endblock %}</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            pink: '#E1306C',
+                            purple: '#833AB4',
+                            orange: '#F77737'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col font-sans">
+    <!-- Navbar -->
+    <nav class="bg-gray-800/80 backdrop-blur border-b border-gray-700 sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <a href="{{ url_for('index') }}" class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-yellow-400 via-pink-600 to-purple-700 flex items-center justify-center shadow-lg shadow-pink-500/20">
+                        <i class="fab fa-instagram text-white text-2xl"></i>
+                    </div>
+                    <div>
+                        <span class="font-bold text-lg bg-gradient-to-r from-pink-500 to-purple-400 bg-clip-text text-transparent">InstaSchedule</span>
+                        <span class="text-xs block text-gray-400 font-mono">Auto 3H Poster</span>
+                    </div>
+                </a>
+
+                <div class="flex items-center space-x-3">
+                    <a href="{{ url_for('index') }}" class="px-3 py-2 text-sm font-medium rounded-lg hover:bg-gray-700 text-gray-300 hover:text-white transition">
+                        <i class="fas fa-th-list mr-1"></i> ড্যাশবোর্ড
+                    </a>
+                    <a href="{{ url_for('health') }}" target="_blank" class="px-3 py-2 text-xs font-mono rounded-lg bg-green-950/60 text-green-400 border border-green-800/50 flex items-center gap-1.5" title="UptimeRobot এ এই লিঙ্কটি পিং করাবেন">
+                        <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                        /health
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Flash Messages -->
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 w-full">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    {% set bg = 'bg-blue-900/60 border-blue-500 text-blue-200' %}
+                    {% if category == 'success' %}
+                        {% set bg = 'bg-green-900/60 border-green-500 text-green-200' %}
+                    {% elif category == 'danger' %}
+                        {% set bg = 'bg-red-900/60 border-red-500 text-red-200' %}
+                    {% elif category == 'warning' %}
+                        {% set bg = 'bg-yellow-900/60 border-yellow-500 text-yellow-200' %}
+                    {% endif %}
+                    <div class="p-4 mb-3 rounded-xl border {{ bg }} flex items-center justify-between text-sm shadow">
+                        <div class="flex items-center space-x-2">
+                            <i class="fas fa-info-circle"></i>
+                            <span>{{ message }}</span>
+                        </div>
+                        <button onclick="this.parentElement.remove()" class="text-gray-400 hover:text-white">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800/50 border-t border-gray-800 py-4 text-center text-xs text-gray-500">
+        <p>Instagram Auto Post Scheduler • Render + UptimeRobot 24/7 Free Setup</p>
+    </footer>
+</body>
+</html>
