@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import shutil
 from pathlib import Path
 from instagrapi import Client
@@ -18,7 +19,8 @@ USERNAME_KEY = "ig_username"
 def get_client() -> Client:
     """Creates and configures an instagrapi Client instance."""
     cl = Client()
-    cl.delay_range = [2, 5]
+    cl.request_timeout = 25
+    cl.delay_range = [1, 2]
     
     # Try loading saved session from DB
     saved_settings = db.get_setting(SESSION_SETTINGS_KEY)
@@ -36,6 +38,63 @@ def save_client_session(cl: Client, username: str):
     settings = cl.get_settings()
     db.set_setting(SESSION_SETTINGS_KEY, json.dumps(settings))
     db.set_setting(USERNAME_KEY, username)
+
+def extract_sessionid(cookie_input: str) -> str:
+    """Extracts sessionid from raw string, header, or Cookie-Editor JSON."""
+    s = cookie_input.strip()
+    if not s:
+        return ""
+        
+    # Check if JSON array (Cookie-Editor export)
+    if s.startswith('[') and 'sessionid' in s:
+        try:
+            items = json.loads(s)
+            for item in items:
+                if item.get('name') == 'sessionid':
+                    return item.get('value', '').strip()
+        except Exception:
+            pass
+            
+    # Check if standard cookie header "sessionid=xyz; ds_user_id=123"
+    match = re.search(r'sessionid=([^;\s]+)', s)
+    if match:
+        return match.group(1).strip()
+        
+    # Treat as raw sessionid string
+    return s.strip('"\'')
+
+def login_instagram_by_cookie(cookie_data: str) -> dict:
+    """
+    Logs in using sessionid cookie instantly without password or 2FA challenge.
+    """
+    sessionid = extract_sessionid(cookie_data)
+    if not sessionid:
+        return {"success": False, "message": "ভুল কুকি ফরম্যাট! কোনো sessionid পাওয়া যায়নি।"}
+    
+    cl = get_client()
+    try:
+        print(f"[Login] Attempting login by sessionid: {sessionid[:12]}...")
+        cl.login_by_sessionid(sessionid)
+        
+        # Get username of logged-in account
+        username = "User"
+        try:
+            user_info = cl.account_info()
+            username = getattr(user_info, 'username', 'User')
+        except Exception:
+            try:
+                user_info = cl.user_info(cl.user_id)
+                username = getattr(user_info, 'username', f"user_{cl.user_id}")
+            except Exception:
+                username = f"user_{cl.user_id}"
+                
+        save_client_session(cl, username)
+        print(f"[Login] Successfully logged in as @{username} via Cookie!")
+        return {"success": True, "message": f"@{username} হিসেবে কুকিজ দিয়ে সফলভাবে লগইন সম্পন্ন হয়েছে!"}
+        
+    except Exception as e:
+        print(f"[Cookie Login Error]: {e}")
+        return {"success": False, "message": f"Cookie দিয়ে লগইন ব্যর্থ: {str(e)}। কুকি এক্সপায়ার বা ভুল হতে পারে।"}
 
 def check_login_status() -> dict:
     """
