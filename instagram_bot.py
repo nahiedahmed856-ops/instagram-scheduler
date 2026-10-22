@@ -107,14 +107,8 @@ def check_login_status() -> dict:
     if not saved_username or not saved_settings:
         return {"logged_in": False, "username": None}
     
-    cl = get_client()
-    try:
-        # Quick validation check
-        cl.get_timeline_feed()
-        return {"logged_in": True, "username": saved_username}
-    except Exception as e:
-        print(f"[Check Login] Session expired or invalid: {e}")
-        return {"logged_in": False, "username": saved_username}
+    # Session is present in database
+    return {"logged_in": True, "username": saved_username}
 
 def login_instagram(username: str, password: str, code: str = None, two_factor_identifier: str = None) -> dict:
     """
