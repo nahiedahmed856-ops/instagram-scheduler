@@ -4,6 +4,7 @@ import tempfile
 import mimetypes
 from pathlib import Path
 from PIL import Image
+import requests
 import gdown
 
 def extract_drive_id(url: str) -> str:
@@ -33,32 +34,69 @@ def extract_drive_id(url: str) -> str:
     return None
 
 
+def download_with_requests(file_id: str, destination: str) -> bool:
+    """Fallback direct streaming downloader from Google Drive."""
+    session = requests.Session()
+    url = f"https://docs.google.com/uc?export=download&id={file_id}&confirm=t"
+    
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36'
+    }
+    
+    response = session.get(url, headers=headers, stream=True, timeout=60)
+    
+    # Check for virus scan confirmation token for large files
+    for key, value in response.cookies.items():
+        if key.startswith('download_warning'):
+            url = f"https://docs.google.com/uc?export=download&id={file_id}&confirm={value}"
+            response = session.get(url, headers=headers, stream=True, timeout=60)
+            break
+            
+    if response.status_code == 200:
+        with open(destination, "wb") as f:
+            for chunk in response.iter_content(chunk_size=32768):
+                if chunk:
+                    f.write(chunk)
+        return os.path.exists(destination) and os.path.getsize(destination) > 1000
+    return False
+
+
 def download_drive_file(drive_url: str, output_dir: str = None) -> tuple[str, str]:
     """
-    Downloads file from Google Drive using gdown.
+    Downloads file from Google Drive using gdown or direct requests fallback.
     Returns (file_path, media_type) where media_type is 'image' or 'video'.
     """
     file_id = extract_drive_id(drive_url)
     if not file_id:
-        raise ValueError("Invalid Google Drive URL. Please make sure the link is public and formatted correctly.")
+        raise ValueError("Invalid Google Drive URL. Please make sure the link is public (Anyone with the link).")
     
     if output_dir is None:
         output_dir = tempfile.mkdtemp(prefix="ig_post_")
     os.makedirs(output_dir, exist_ok=True)
     
-    download_url = f"https://drive.google.com/uc?id={file_id}"
-    
-    # Use gdown to download public file
     temp_target = os.path.join(output_dir, f"raw_{file_id}")
-    output_path = gdown.download(download_url, temp_target, quiet=False, fuzzy=True)
+    download_success = False
     
-    if not output_path or not os.path.exists(output_path):
-        raise RuntimeError("Failed to download file from Google Drive. Please ensure 'Anyone with the link' has view access.")
+    # Method 1: Try gdown with ID parameter (Standard API)
+    try:
+        output_path = gdown.download(id=file_id, output=temp_target, quiet=True)
+        if output_path and os.path.exists(output_path) and os.path.getsize(output_path) > 1000:
+            download_success = True
+    except Exception as gdown_err:
+        print(f"[Warning] gdown download error: {gdown_err}")
+    
+    # Method 2: Direct HTTP streaming fallback if gdown failed
+    if not download_success:
+        print("[Info] Trying direct HTTP download fallback from Google Drive...")
+        download_success = download_with_requests(file_id, temp_target)
+        
+    if not download_success or not os.path.exists(temp_target):
+        raise RuntimeError("Google Drive থেকে ফাইল ডাউনলোড করা যায়নি। নিশ্চিত করুন ফাইলের শেয়ার অপশনে 'Anyone with the link' দেওয়া আছে।")
+        
+    output_path = temp_target
     
     # Detect file type
     mime_type, _ = mimetypes.guess_type(output_path)
-    
-    # Inspect extension or magic bytes if unknown
     ext = Path(output_path).suffix.lower()
     
     is_video = ext in ['.mp4', '.mov', '.avi', '.mkv'] or (mime_type and mime_type.startswith('video'))
@@ -67,10 +105,12 @@ def download_drive_file(drive_url: str, output_dir: str = None) -> tuple[str, st
         # Standardize video to .mp4
         final_path = os.path.join(output_dir, f"video_{file_id}.mp4")
         if output_path != final_path:
+            if os.path.exists(final_path):
+                os.remove(final_path)
             os.rename(output_path, final_path)
         return final_path, 'video'
     else:
-        # It's an image. Convert to high quality RGB JPEG for Instagram compatibility
+        # Check if it might be an image
         final_path = os.path.join(output_dir, f"photo_{file_id}.jpg")
         try:
             with Image.open(output_path) as img:
@@ -79,10 +119,10 @@ def download_drive_file(drive_url: str, output_dir: str = None) -> tuple[str, st
             if output_path != final_path and os.path.exists(output_path):
                 os.remove(output_path)
             return final_path, 'image'
-        except Exception as e:
-            # If not PIL readable, could still be video or raw file
-            if os.path.getsize(output_path) > 1024 * 1024 * 2: # > 2MB likely video
-                final_path = os.path.join(output_dir, f"video_{file_id}.mp4")
-                os.rename(output_path, final_path)
-                return final_path, 'video'
-            raise RuntimeError(f"Could not process image: {str(e)}")
+        except Exception:
+            # If PIL fails to open it as image, test if it's a video file without extension
+            final_path = os.path.join(output_dir, f"video_{file_id}.mp4")
+            if os.path.exists(final_path):
+                os.remove(final_path)
+            os.rename(output_path, final_path)
+            return final_path, 'video'
