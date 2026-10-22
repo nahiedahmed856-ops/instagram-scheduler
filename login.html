@@ -3,78 +3,131 @@
 {% block title %}Instagram Login - Auto Scheduler{% endblock %}
 
 {% block content %}
-<div class="max-w-md mx-auto py-8">
-    <div class="bg-gray-800 border border-gray-700 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
-        <!-- Top decoration -->
+<div class="max-w-lg mx-auto py-6">
+    <div class="bg-gray-800 border border-gray-700 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+        <!-- Background glows -->
         <div class="absolute -top-12 -right-12 w-32 h-32 bg-pink-600/20 rounded-full blur-2xl pointer-events-none"></div>
         <div class="absolute -bottom-12 -left-12 w-32 h-32 bg-purple-600/20 rounded-full blur-2xl pointer-events-none"></div>
 
         <div class="text-center mb-6">
-            <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-yellow-400 via-pink-600 to-purple-700 flex items-center justify-center mx-auto mb-3 shadow-lg shadow-pink-500/20">
-                <i class="fab fa-instagram text-white text-3xl"></i>
+            <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-yellow-400 via-pink-600 to-purple-700 flex items-center justify-center mx-auto mb-3 shadow-lg shadow-pink-500/20">
+                <i class="fab fa-instagram text-white text-2xl"></i>
             </div>
             <h2 class="text-xl font-bold text-white">ইনস্টাগ্রাম লগইন</h2>
-            <p class="text-xs text-gray-400 mt-1">কোনো API Key ছাড়াই সরাসরি আপনার অ্যাকাউন্টে কানেক্ট করুন</p>
+            <p class="text-xs text-gray-400 mt-1">পাসওয়ার্ড অথবা কুকিজ (Cookies) দিয়ে সহজে কানেক্ট করুন</p>
         </div>
 
-        <form action="{{ url_for('login') }}" method="POST" class="space-y-4">
-            <!-- Username -->
-            <div>
-                <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
-                    ইনস্টাগ্রাম ইউজারনেম
-                </label>
-                <div class="relative">
-                    <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-gray-400 text-sm">
-                        @
-                    </span>
-                    <input type="text" name="username" value="{{ username or '' }}" required
-                           placeholder="username"
-                           class="w-full pl-8 pr-3.5 py-2.5 bg-gray-900 border border-gray-700 rounded-xl text-sm text-white focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 transition">
-                </div>
-            </div>
-
-            <!-- Password -->
-            <div>
-                <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
-                    পাসওয়ার্ড
-                </label>
-                <div class="relative">
-                    <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-gray-400 text-sm">
-                        <i class="fas fa-lock"></i>
-                    </span>
-                    <input type="password" name="password" {% if not needs_2fa %}required{% endif %}
-                           value="{{ password or '' }}"
-                           placeholder="••••••••"
-                           class="w-full pl-10 pr-3.5 py-2.5 bg-gray-900 border border-gray-700 rounded-xl text-sm text-white focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 transition">
-                </div>
-            </div>
-
-            <!-- 2FA / Verification Code Input (Shown if required) -->
-            {% if needs_2fa %}
-                <div class="p-3.5 bg-yellow-950/40 border border-yellow-700/50 rounded-xl space-y-2">
-                    <label class="block text-xs font-semibold text-yellow-300 uppercase tracking-wider">
-                        <i class="fas fa-shield-alt mr-1"></i> 2FA / সিকিউরিটি কোড (SMS বা App)
-                    </label>
-                    <input type="text" name="verification_code" required autofocus
-                           placeholder="যেমন: 123456"
-                           class="w-full px-3.5 py-2.5 bg-gray-900 border border-yellow-600 rounded-xl text-sm text-white font-mono tracking-widest text-center focus:outline-none focus:border-yellow-400 transition">
-                    <input type="hidden" name="two_factor_identifier" value="{{ two_factor_identifier }}">
-                    <p class="text-[11px] text-yellow-200/80">আপনার ফোনে পাঠানো এসএমএস বা Authenticator অ্যাপের ৬ সংখ্যার ওটিপি কোডটি লিখুন।</p>
-                </div>
-            {% endif %}
-
-            <!-- Submit Button -->
-            <button type="submit" class="w-full py-3 bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 hover:opacity-95 text-white font-semibold rounded-xl text-sm shadow-lg shadow-pink-500/20 transition flex items-center justify-center space-x-2">
-                <i class="fas fa-sign-in-alt"></i>
-                <span>{% if needs_2fa %}ভেরিফাই ও সম্পন্ন করুন{% else %}লগইন করুন{% endif %}</span>
+        <!-- Tab Switcher -->
+        <div class="flex p-1 bg-gray-900 rounded-xl mb-6 border border-gray-700/80">
+            <button type="button" id="tab-btn-cookie" onclick="switchTab('cookie')"
+                    class="flex-1 py-2 text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1.5 {% if active_tab == 'cookie' or not active_tab %}bg-pink-600 text-white shadow{% else %}text-gray-400 hover:text-white{% endif %}">
+                <i class="fas fa-cookie-bite text-yellow-400"></i>
+                <span>Cookies দিয়ে (সুপার ফাস্ট ⭐)</span>
             </button>
-        </form>
+            <button type="button" id="tab-btn-password" onclick="switchTab('password')"
+                    class="flex-1 py-2 text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1.5 {% if active_tab == 'password' %}bg-pink-600 text-white shadow{% else %}text-gray-400 hover:text-white{% endif %}">
+                <i class="fas fa-key"></i>
+                <span>ইউজারনেম ও পাসওয়ার্ড</span>
+            </button>
+        </div>
 
-        <!-- Security Note -->
+        <!-- 1. Cookie Login Form -->
+        <div id="tab-content-cookie" class="{% if active_tab == 'password' %}hidden{% endif %} space-y-4">
+            <div class="p-3.5 bg-gray-900/80 rounded-xl border border-gray-700 text-xs space-y-2 text-gray-300">
+                <p class="font-semibold text-yellow-400 flex items-center gap-1">
+                    <i class="fas fa-magic"></i>
+                    <span>কুকিজ দিয়ে লগইনের সুবিধা:</span>
+                </p>
+                <p class="text-[11px] leading-relaxed text-gray-400">
+                    কোনো পাসওয়ার্ড বা ওটিপির ঝামেলা নেই। এটি ১০০% নিশ্চিতভাবে কাজ করে এবং ১ সেকেন্ডে ইনস্ট্যান্ট লগইন হয়ে যায়।
+                </p>
+                <div class="pt-2 border-t border-gray-800 text-[11px] space-y-1 text-gray-400">
+                    <p class="font-medium text-gray-300">💡 যেভাবে <code class="text-pink-400 font-mono">sessionid</code> কপি করবেন:</p>
+                    <ol class="list-decimal list-inside space-y-0.5 pl-1">
+                        <li>ব্রাউজারে <a href="https://instagram.com" target="_blank" class="text-blue-400 underline">instagram.com</a>-এ লগইন করুন।</li>
+                        <li>কিবোর্ডে <kbd class="px-1 py-0.5 bg-gray-800 border border-gray-600 rounded text-[10px]">F12</kbd> চাপুন ➔ <strong>Application</strong> (বা Storage) ট্যাবে যান।</li>
+                        <li>বামে <strong>Cookies</strong> ➔ <code>https://www.instagram.com</code> এ ক্লিক করুন।</li>
+                        <li>তালিকায় <strong><span class="text-pink-300">sessionid</span></strong>-এর মানটি (Value) ডাবল ক্লিক করে কপি করুন।</li>
+                    </ol>
+                </div>
+            </div>
+
+            <form action="{{ url_for('login') }}" method="POST" class="space-y-4" onsubmit="var btn=document.getElementById('cookie-login-btn'); btn.disabled=true; btn.innerHTML='<i class=\'fas fa-spinner fa-spin mr-2\'></i> কানেক্ট হচ্ছে...';">
+                <input type="hidden" name="login_type" value="cookie">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
+                        sessionid অথবা সম্পূর্ণ Cookie পেস্ট করুন:
+                    </label>
+                    <textarea name="cookie_data" required rows="3"
+                              placeholder="যেমন: 6928374619%3Adksjdskdsjkdsj... (অথবা Cookie-Editor এর JSON)"
+                              class="w-full px-3.5 py-2.5 bg-gray-900 border border-gray-700 rounded-xl text-xs text-white font-mono focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 transition"></textarea>
+                </div>
+
+                <button type="submit" id="cookie-login-btn" class="w-full py-3 bg-gradient-to-r from-yellow-500 via-pink-600 to-purple-600 hover:opacity-95 text-white font-semibold rounded-xl text-sm shadow-lg shadow-pink-500/20 transition flex items-center justify-center space-x-2">
+                    <i class="fas fa-cookie-bite"></i>
+                    <span>কুকিজ দিয়ে ইনস্ট্যান্ট লগইন করুন</span>
+                </button>
+            </form>
+        </div>
+
+        <!-- 2. Password Login Form -->
+        <div id="tab-content-password" class="{% if active_tab != 'password' %}hidden{% endif %} space-y-4">
+            <form action="{{ url_for('login') }}" method="POST" class="space-y-4" onsubmit="var btn=document.getElementById('pwd-login-btn'); btn.disabled=true; btn.innerHTML='<i class=\'fas fa-spinner fa-spin mr-2\'></i> ভেরিফাই হচ্ছে, ২০-৩০ সেকেন্ড অপেক্ষা করুন...';">
+                <input type="hidden" name="login_type" value="password">
+                
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
+                        ইনস্টাগ্রাম ইউজারনেম (ইমেইল নয়, আসল Username দিন)
+                    </label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-gray-400 text-sm">
+                            @
+                        </span>
+                        <input type="text" name="username" value="{{ username or '' }}" required
+                               placeholder="আপনার ইনস্টাগ্রাম Username"
+                               class="w-full pl-8 pr-3.5 py-2.5 bg-gray-900 border border-gray-700 rounded-xl text-sm text-white focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 transition">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
+                        পাসওয়ার্ড
+                    </label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-gray-400 text-sm">
+                            <i class="fas fa-lock"></i>
+                        </span>
+                        <input type="password" name="password" {% if not needs_2fa %}required{% endif %}
+                               value="{{ password or '' }}"
+                               placeholder="••••••••"
+                               class="w-full pl-10 pr-3.5 py-2.5 bg-gray-900 border border-gray-700 rounded-xl text-sm text-white focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 transition">
+                    </div>
+                </div>
+
+                {% if needs_2fa %}
+                    <div class="p-3.5 bg-yellow-950/40 border border-yellow-700/50 rounded-xl space-y-2">
+                        <label class="block text-xs font-semibold text-yellow-300 uppercase tracking-wider">
+                            <i class="fas fa-shield-alt mr-1"></i> 2FA / সিকিউরিটি কোড (SMS বা App)
+                        </label>
+                        <input type="text" name="verification_code" required autofocus
+                               placeholder="যেমন: 123456"
+                               class="w-full px-3.5 py-2.5 bg-gray-900 border border-yellow-600 rounded-xl text-sm text-white font-mono tracking-widest text-center focus:outline-none focus:border-yellow-400 transition">
+                        <input type="hidden" name="two_factor_identifier" value="{{ two_factor_identifier }}">
+                        <p class="text-[11px] text-yellow-200/80">আপনার ফোনে পাঠানো এসএমএস বা Authenticator অ্যাপের ৬ সংখ্যার ওটিপি কোডটি লিখুন।</p>
+                    </div>
+                {% endif %}
+
+                <button type="submit" id="pwd-login-btn" class="w-full py-3 bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 hover:opacity-95 text-white font-semibold rounded-xl text-sm shadow-lg shadow-pink-500/20 transition flex items-center justify-center space-x-2">
+                    <i class="fas fa-sign-in-alt"></i>
+                    <span>{% if needs_2fa %}ভেরিফাই ও সম্পন্ন করুন{% else %}পাসওয়ার্ড দিয়ে লগইন করুন{% endif %}</span>
+                </button>
+            </form>
+        </div>
+
         <div class="mt-6 pt-5 border-t border-gray-750 text-center">
             <p class="text-[11px] text-gray-400 leading-relaxed">
-                <i class="fas fa-lock text-green-400 mr-1"></i>
-                আপনার তথ্য সুরক্ষিত। সেশনটি শুধুমাত্র আপনার Render সার্ভারের ডাটাবেজে এনক্রিপ্ট হয়ে সেভ থাকবে।
+                <i class="fas fa-shield-alt text-green-400 mr-1"></i>
+                আপনার তথ্য সুরক্ষিত। লগইন সেশনটি শুধুমাত্র আপনার নিজস্ব Render সার্ভারে এনক্রিপ্ট হয়ে সেভ থাকে।
             </p>
             <a href="{{ url_for('index') }}" class="inline-block mt-3 text-xs text-gray-400 hover:text-white transition">
                 <i class="fas fa-arrow-left mr-1"></i> ড্যাশবোর্ডে ফিরে যান
@@ -82,4 +135,25 @@
         </div>
     </div>
 </div>
+
+<script>
+function switchTab(tab) {
+    const cookieTab = document.getElementById('tab-content-cookie');
+    const pwdTab = document.getElementById('tab-content-password');
+    const btnCookie = document.getElementById('tab-btn-cookie');
+    const btnPwd = document.getElementById('tab-btn-password');
+
+    if (tab === 'cookie') {
+        cookieTab.classList.remove('hidden');
+        pwdTab.classList.add('hidden');
+        btnCookie.className = 'flex-1 py-2 text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1.5 bg-pink-600 text-white shadow';
+        btnPwd.className = 'flex-1 py-2 text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1.5 text-gray-400 hover:text-white';
+    } else {
+        pwdTab.classList.remove('hidden');
+        cookieTab.classList.add('hidden');
+        btnPwd.className = 'flex-1 py-2 text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1.5 bg-pink-600 text-white shadow';
+        btnCookie.className = 'flex-1 py-2 text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1.5 text-gray-400 hover:text-white';
+    }
+}
+</script>
 {% endblock %}

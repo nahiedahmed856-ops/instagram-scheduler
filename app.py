@@ -520,11 +520,11 @@ function switchTab(tab) {
 }
 
 app = Flask(__name__)
-# Multi-layered Template Loader: checks templates/ folder, root folder, and embedded fallback templates!
+# Priority Template Loader: loads latest embedded templates first to avoid stale root files!
 app.jinja_loader = ChoiceLoader([
+    DictLoader(FALLBACK_TEMPLATES),
     FileSystemLoader(TEMPLATE_DIR),
-    FileSystemLoader(BASE_DIR),
-    DictLoader(FALLBACK_TEMPLATES)
+    FileSystemLoader(BASE_DIR)
 ])
 app.secret_key = os.environ.get("SECRET_KEY", "super-secret-key-123456789")
 
